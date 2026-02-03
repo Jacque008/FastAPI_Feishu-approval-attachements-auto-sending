@@ -58,6 +58,7 @@ class EmailSender:
             msg.attach(part)
 
         # Send email - use STARTTLS for port 587, SSL for port 465
+        # Use longer timeout (120s) for cloud hosting environments
         if self.port == 587:
             # Microsoft 365 / Office 365 uses STARTTLS
             await aiosmtplib.send(
@@ -67,6 +68,7 @@ class EmailSender:
                 username=self.username,
                 password=self.password,
                 start_tls=True,
+                timeout=120,
             )
         else:
             # Port 465 uses SSL
@@ -77,4 +79,5 @@ class EmailSender:
                 username=self.username,
                 password=self.password,
                 use_tls=True,
+                timeout=120,
             )
