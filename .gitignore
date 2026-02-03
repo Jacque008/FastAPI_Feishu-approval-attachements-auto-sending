@@ -1,0 +1,22 @@
+# Environment variables (contains secrets)
+.env
+
+# Unused/archived files
+other/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Claude
+.claude/
+
+# OS
+.DS_Store

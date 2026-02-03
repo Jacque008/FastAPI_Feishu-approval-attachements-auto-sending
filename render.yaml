@@ -1,0 +1,43 @@
+# Render Blueprint - https://render.com/docs/blueprint-spec
+# Deploy: Connect GitHub repo in Render Dashboard
+
+services:
+  - type: web
+    name: feishu-approval-bot
+    runtime: python
+    region: frankfurt  # Closest to Stockholm
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:APP --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      # Secrets - set these in Render Dashboard
+      - key: FEISHU_APP_ID
+        sync: false
+      - key: FEISHU_APP_SECRET
+        sync: false
+      - key: FEISHU_VERIFICATION_TOKEN
+        sync: false
+      - key: FEISHU_SIGNING_SECRET
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false
+      # Target emails for approval types
+      - key: EMAIL_费用报销TEST
+        sync: false
+      - key: EMAIL_付款TEST
+        sync: false
+      - key: EMAIL_费用报销
+        sync: false
+      - key: EMAIL_付款_瑞典对公_SHIC
+        sync: false
+    healthCheckPath: /health
