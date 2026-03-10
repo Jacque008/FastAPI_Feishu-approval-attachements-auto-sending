@@ -178,12 +178,12 @@ class ApprovalHandler:
             f"附件数量: {len(downloaded)}\n"
         )
 
-        print(f"Sending email to {target_email} with {len(downloaded)} attachments...")
+        print(f"Sending email({instance_code}) to {target_email} with {len(downloaded)} attachments...")
         await self.email_sender.send_with_attachments(
             to_email=target_email,
             subject=subject,
             body=body,
             attachments=downloaded,
         )
-        print(f"Email sent successfully to {target_email}")
+        print(f"Email({instance_code}) sent successfully to {target_email}")
         return True

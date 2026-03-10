@@ -3,7 +3,7 @@ import hmac
 import hashlib
 from typing import Any, Dict, Set
 
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
 from config import get_settings
@@ -152,7 +152,7 @@ async def health_check():
 
 
 @APP.post("/feishu/webhook/approval")
-async def feishu_webhook(request: Request, background_tasks: BackgroundTasks):
+async def feishu_webhook(request: Request):
     raw_body = await request.body()
     try:
         body = json.loads(raw_body.decode("utf-8"))
@@ -179,9 +179,9 @@ async def feishu_webhook(request: Request, background_tasks: BackgroundTasks):
         print(f"Duplicate event {event_id}, skipping")
         return JSONResponse({"ok": True})
 
-    # 5) Process event in background (instance dedup happens there for APPROVED events)
+    # 5) Process event inline (not background) to ensure completion
     instance_code = get_instance_code(body)
     print(f"Processing event: {event_id}, instance: {instance_code}")
-    background_tasks.add_task(process_approval_event, body)
+    await process_approval_event(body)
 
     return JSONResponse({"ok": True})
