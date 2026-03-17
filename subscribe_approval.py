@@ -17,7 +17,7 @@ async def subscribe(approval_code: str):
 
     async with httpx.AsyncClient() as http:
         resp = await http.post(
-            "https://open.feishu.cn/open-apis/approval/openapi/v1/subscription/subscribe",
+            "https://www.feishu.cn/approval/openapi/v1/subscription/subscribe",
             headers={"Authorization": f"Bearer {token}"},
             json={"definition_code": approval_code},
         )
@@ -35,7 +35,7 @@ async def main():
     # Add all approval codes here
     approval_codes = [
         "96FDDC67-4638-4F4A-B220-90C222EADFE7",  # 付款-瑞典对公-SHIC
-        "C439B482-9BBF-4F10-9E3C-95372B37F146",  # 费用报销
+        "EFD8B67C-B895-404D-993F-C52D65F960A6",  # 费用报销
         # Add more approval codes as needed
     ]
 

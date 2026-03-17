@@ -47,7 +47,7 @@ class FeishuClient:
         headers = kwargs.pop("headers", {})
         headers["Authorization"] = f"Bearer {token}"
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.request(
                 method,
                 f"{self.BASE_URL}{path}",
@@ -90,7 +90,12 @@ class FeishuClient:
 
     async def download_file(self, url: str) -> bytes:
         """Download file content from URL."""
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(url, follow_redirects=True)
+        token = await self._get_tenant_access_token()
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(
+                url,
+                headers={"Authorization": f"Bearer {token}"},
+                follow_redirects=True,
+            )
             resp.raise_for_status()
             return resp.content
