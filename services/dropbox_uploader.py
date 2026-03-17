@@ -24,7 +24,7 @@ class DropboxUploader:
     ) -> str:
         """Build Dropbox path: /{year}/{Mon}/{approval_name}/{serial_number}-{filename}"""
         dt = datetime.fromtimestamp(end_time_ms / 1000, tz=STOCKHOLM_TZ)
-        folder = dt.strftime("/%Y/%b")
+        folder = dt.strftime("/%Y/%b")+"_code"
         return f"{folder}/{approval_name}/{serial_number}-{filename}"
 
     def upload_file(self, content: bytes, dropbox_path: str) -> str:
