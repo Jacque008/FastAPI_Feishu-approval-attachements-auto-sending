@@ -21,14 +21,21 @@ services:
         sync: false
       - key: FEISHU_SIGNING_SECRET
         sync: false
-      # Resend Email (https://resend.com)
-      - key: RESEND_API_KEY
+      # Dropbox (https://www.dropbox.com/developers/apps)
+      - key: DROPBOX_REFRESH_TOKEN
         sync: false
-      - key: RESEND_FROM_EMAIL
+      - key: DROPBOX_APP_KEY
         sync: false
-      # Target emails for approval types
-      - key: EMAIL_EXPENSE
+      - key: DROPBOX_APP_SECRET
         sync: false
-      - key: EMAIL_PAYMENT_SWEDEN_SHIC
-        sync: false
+      # Resend Email (https://resend.com)  # for email
+      # - key: RESEND_API_KEY  # for email
+      #   sync: false  # for email
+      # - key: RESEND_FROM_EMAIL  # for email
+      #   sync: false  # for email
+      # Target emails for approval types  # for email
+      # - key: EMAIL_EXPENSE  # for email
+      #   sync: false  # for email
+      # - key: EMAIL_PAYMENT_SWEDEN_SHIC  # for email
+      #   sync: false  # for email
     healthCheckPath: /health
