@@ -22,9 +22,9 @@ class DropboxUploader:
         serial_number: str,
         filename: str,
     ) -> str:
-        """Build Dropbox path: /{year}/{Mon}/{approval_name}/{serial_number}-{filename}"""
+        """Build Dropbox path: /{year}_code/{Mon}/{approval_name}/{serial_number}-{filename}"""
         dt = datetime.fromtimestamp(end_time_ms / 1000, tz=STOCKHOLM_TZ)
-        folder = dt.strftime("/%Y/%b")+"_code"
+        folder = dt.strftime("/%Y_code/%b")
         return f"{folder}/{approval_name}/{serial_number}-{filename}"
 
     def upload_file(self, content: bytes, dropbox_path: str) -> str:
