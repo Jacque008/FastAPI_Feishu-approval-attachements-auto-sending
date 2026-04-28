@@ -89,13 +89,20 @@ class FeishuClient:
         }
 
     async def download_file(self, url: str) -> bytes:
-        """Download file content from URL."""
-        token = await self._get_tenant_access_token()
+        """Download file content from URL.
+
+        Pre-signed CDN URLs (feishucdn.com) are downloaded without auth;
+        internal drive URLs use the tenant access token.
+        """
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(
-                url,
-                headers={"Authorization": f"Bearer {token}"},
-                follow_redirects=True,
-            )
+            if "feishucdn.com" in url:
+                resp = await client.get(url, follow_redirects=True)
+            else:
+                token = await self._get_tenant_access_token()
+                resp = await client.get(
+                    url,
+                    headers={"Authorization": f"Bearer {token}"},
+                    follow_redirects=True,
+                )
             resp.raise_for_status()
             return resp.content

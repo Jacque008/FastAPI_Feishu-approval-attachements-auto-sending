@@ -16,13 +16,13 @@ class Settings(BaseSettings):
     dropbox_app_key: str
     dropbox_app_secret: str
 
-    # Resend Email  # for email
-    # resend_api_key: str  # for email
-    # resend_from_email: str = "onboarding@resend.dev"  # for email
+    # Resend Email
+    resend_api_key: str
+    resend_from_email: str = "onboarding@resend.dev"
 
-    # Target email addresses for different approval types  # for email
-    # email_expense: str = ""  # for email
-    # email_payment_sweden_shic: str = ""  # for email
+    # Target email addresses for different approval types (Fortnox)
+    email_expense: str = ""       # 费用报销 - SHiC
+    email_payment_shic: str = ""  # 对公支付申请 - SHiC(298)
 
     # Auto-decrypt encrypted values (starting with "ENC:")
     @field_validator("feishu_app_secret", mode="before")

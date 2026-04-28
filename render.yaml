@@ -28,14 +28,14 @@ services:
         sync: false
       - key: DROPBOX_APP_SECRET
         sync: false
-      # Resend Email (https://resend.com)  # for email
-      # - key: RESEND_API_KEY  # for email
-      #   sync: false  # for email
-      # - key: RESEND_FROM_EMAIL  # for email
-      #   sync: false  # for email
-      # Target emails for approval types  # for email
-      # - key: EMAIL_EXPENSE  # for email
-      #   sync: false  # for email
-      # - key: EMAIL_PAYMENT_SWEDEN_SHIC  # for email
-      #   sync: false  # for email
+      # Resend Email (https://resend.com)
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      # Target Fortnox emails per approval type
+      - key: EMAIL_EXPENSE
+        sync: false
+      - key: EMAIL_PAYMENT_SHIC
+        sync: false
     healthCheckPath: /health

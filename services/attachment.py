@@ -12,6 +12,7 @@ class AttachmentInfo:
     mime_type: str = ""
     content: Optional[bytes] = None
     download_url: str = ""
+    is_payment_voucher: bool = False  # True for 支付凭证 / 办理 step attachments
 
 
 class AttachmentService:
@@ -35,13 +36,23 @@ class AttachmentService:
         self._extract_attachments_recursive(form_data, attachments)
         return attachments
 
-    def _extract_attachments_recursive(self, controls: list, attachments: list[AttachmentInfo]):
-        """Recursively extract attachments from form controls."""
+    def _extract_attachments_recursive(
+        self,
+        controls: list,
+        attachments: list[AttachmentInfo],
+        is_payment_voucher: bool = False,
+    ):
+        """Recursively extract attachments from form controls.
+
+        Sets is_payment_voucher=True for attachments whose field name contains
+        "支付凭证".
+        """
         for control in controls:
             if not isinstance(control, dict):
                 continue
 
             control_type = control.get("type", "")
+            field_name = control.get("name", "")
 
             # Handle fieldList (费用明细) - contains nested controls
             if control_type == "fieldList":
@@ -49,8 +60,7 @@ class AttachmentService:
                 if isinstance(value, list):
                     for row in value:
                         if isinstance(row, list):
-                            # Each row is a list of controls
-                            self._extract_attachments_recursive(row, attachments)
+                            self._extract_attachments_recursive(row, attachments, is_payment_voucher)
                 continue
 
             # Handle attachment controls
@@ -61,18 +71,21 @@ class AttachmentService:
             if not value:
                 continue
 
+            # Determine if this field is a payment voucher field
+            field_is_voucher = is_payment_voucher or "支付凭证" in field_name
+
             # Value can be a JSON string or already parsed
             if isinstance(value, str):
                 try:
                     value = json.loads(value)
                 except json.JSONDecodeError:
-                    # Could be a single URL string
                     if value.startswith("http"):
                         attachments.append(
                             AttachmentInfo(
                                 file_token="",
                                 name="attachment",
                                 download_url=value,
+                                is_payment_voucher=field_is_voucher,
                             )
                         )
                     continue
@@ -81,7 +94,6 @@ class AttachmentService:
             ext = control.get("ext")
             ext_filenames = []
             if isinstance(ext, str) and ext:
-                # ext may contain multiple filenames separated by comma
                 ext_filenames = [name.strip() for name in ext.split(",")]
             elif isinstance(ext, dict):
                 name = ext.get("name") or ext.get("file_name")
@@ -93,15 +105,14 @@ class AttachmentService:
             # Handle both single file and list of files
             files = value if isinstance(value, list) else [value]
             for i, file_info in enumerate(files):
-                # Handle direct URL strings (common in attachmentV2)
                 if isinstance(file_info, str) and file_info.startswith("http"):
-                    # Use corresponding ext filename if available
                     filename = ext_filenames[i] if i < len(ext_filenames) else f"attachment_{i+1}"
                     attachments.append(
                         AttachmentInfo(
                             file_token="",
                             name=filename,
                             download_url=file_info,
+                            is_payment_voucher=field_is_voucher,
                         )
                     )
                     continue
@@ -119,8 +130,39 @@ class AttachmentService:
                         name=file_name,
                         mime_type=file_info.get("mime_type", ""),
                         download_url=download_url,
+                        is_payment_voucher=field_is_voucher,
                     )
                 )
+
+    def extract_task_attachments(self, instance_data: dict) -> list[AttachmentInfo]:
+        """Extract attachments uploaded in 办理 step (from timeline entries).
+
+        These are marked is_payment_voucher=True (e.g. bank transfer receipts).
+        Timeline entries with a "files" key contain the attachments uploaded
+        by the handler during the 办理/处理 step.
+        """
+        attachments: list[AttachmentInfo] = []
+
+        for item in instance_data.get("timeline", []):
+            files = item.get("files")
+            if not files:
+                continue
+            for file_info in files:
+                if not isinstance(file_info, dict):
+                    continue
+                url = file_info.get("url", "")
+                # title looks like "uuid.png" — use it as filename
+                name = file_info.get("title") or "payment_voucher"
+                if not url:
+                    continue
+                attachments.append(AttachmentInfo(
+                    file_token="",
+                    name=name,
+                    download_url=url,
+                    is_payment_voucher=True,
+                ))
+
+        return attachments
 
     def extract_email_from_form(
         self,
