@@ -25,23 +25,24 @@ class DropboxUploader:
 
     def _build_path(
         self,
-        end_time_ms: int,
+        month_folder: str,
         approval_name: str,
         serial_number: str,
         filename: str,
+        subfolder: str,
         amount: str = "",
         invoice_date: str = "",
         project: str = "",
         index: int = 0,
         is_payment_voucher: bool = False,
     ) -> str:
-        """Build Dropbox path: /{year}_code/{Mon}/{approval_name}/{amount}-{date}-{project}-{serial_number}.{ext}
+        """Build Dropbox path: /{year}_code/{Mon}/{approval_name}/{subfolder}/{filename}
 
+        month_folder is derived from invoice_date (票面日期), falling back to end_time_ms.
+        subfolder is shared by all files in the same approval: {amount}-{invoice_date}-{serial_number}
         When an approval has multiple attachments with the same extension, pass
         index=1,2,3... to append a suffix and avoid name collisions.
         """
-        dt = datetime.fromtimestamp(end_time_ms / 1000, tz=STOCKHOLM_TZ)
-        folder = dt.strftime("/%Y_code/%b")
         ext = ("." + filename.rsplit(".", 1)[1]) if "." in filename else ""
         suffix = f"-{index}" if index > 0 else ""
         serial_part = (
@@ -53,7 +54,7 @@ class DropboxUploader:
             f"{_sanitize(amount)}-{_sanitize(invoice_date)}"
             f"-{_sanitize(project)}-{serial_part}{suffix}{ext}"
         )
-        return f"{folder}/{approval_name}/{new_name}"
+        return f"{month_folder}/{approval_name}/{subfolder}/{new_name}"
 
     def upload_file(self, content: bytes, dropbox_path: str) -> str:
         """Upload file to Dropbox.
@@ -94,6 +95,18 @@ class DropboxUploader:
         """
         from collections import Counter
 
+        # Year/month folder based on invoice_date (票面日期); fall back to end_time_ms
+        try:
+            if invoice_date and len(invoice_date) >= 6:
+                month_folder = datetime(int(invoice_date[:4]), int(invoice_date[4:6]), 1, tzinfo=STOCKHOLM_TZ).strftime("/%Y_code/%b")
+            else:
+                raise ValueError
+        except (ValueError, IndexError):
+            month_folder = datetime.fromtimestamp(end_time_ms / 1000, tz=STOCKHOLM_TZ).strftime("/%Y_code/%b")
+
+        # Shared folder for all attachments in this approval: {amount}-{invoice_date}-{serial_number}
+        subfolder = f"{_sanitize(amount)}-{_sanitize(invoice_date)}-{_sanitize(serial_number)}"
+
         # Count per (is_payment_voucher, ext) so vouchers and receipts
         # each get their own index series and don't collide with each other.
         type_ext_counts: Counter = Counter(
@@ -117,8 +130,8 @@ class DropboxUploader:
             # Vouchers use payment_deadline as date (if available), others use invoice_date
             date = payment_deadline if (att.is_payment_voucher and payment_deadline) else invoice_date
             path = self._build_path(
-                end_time_ms, approval_name, serial_number, att.name,
-                amount, date, project, index=index,
+                month_folder, approval_name, serial_number, att.name,
+                subfolder, amount, date, project, index=index,
                 is_payment_voucher=att.is_payment_voucher,
             )
             try:

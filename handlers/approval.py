@@ -3,7 +3,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import Any
 from config import Settings
-from services import FeishuClient, AttachmentService, DropboxUploader, EmailSender
+from services import FeishuClient, AttachmentService, DropboxUploader  # , EmailSender
 
 _STOCKHOLM_TZ = ZoneInfo("Europe/Stockholm")
 
@@ -28,11 +28,11 @@ def _format_date(value) -> str:
 class ApprovalHandler:
     KNOWN_APPROVAL_NAMES = {"费用报销 - SHiC", "对公支付申请 - SHiC(298)"}
 
-    # approval_name → settings attribute for target Fortnox email
-    APPROVAL_EMAIL_ATTRS = {
-        "费用报销 - SHiC": "email_expense",
-        "对公支付申请 - SHiC(298)": "email_payment_shic",
-    }
+    # # approval_name → settings attribute for target Fortnox email
+    # APPROVAL_EMAIL_ATTRS = {
+    #     "费用报销 - SHiC": "email_expense",
+    #     "对公支付申请 - SHiC(298)": "email_payment_shic",
+    # }
 
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -46,10 +46,10 @@ class ApprovalHandler:
             app_key=settings.dropbox_app_key,
             app_secret=settings.dropbox_app_secret,
         )
-        self.email_sender = EmailSender(
-            api_key=settings.resend_api_key,
-            from_email=settings.resend_from_email,
-        )
+        # self.email_sender = EmailSender(
+        #     api_key=settings.resend_api_key,
+        #     from_email=settings.resend_from_email,
+        # )
 
     def _extract_form_metadata(self, form_json: str) -> dict:
         """Extract amount, invoice_date, payment_deadline, and project from form JSON."""
@@ -101,7 +101,7 @@ class ApprovalHandler:
                                     except json.JSONDecodeError:
                                         result["amount"] = str(item.get("value", "")).replace(".", ",")
                                 break
-                # Project from 报销内容 rows (费用报销)
+                # Project and invoice_date from fieldList rows (费用报销)
                 rows = value if isinstance(value, list) else []
                 for row in rows:
                     if isinstance(row, list):
@@ -110,15 +110,17 @@ class ApprovalHandler:
                                 content = str(cell.get("value", "")).strip()
                                 if content:
                                     project_parts.append(content)
+                            elif cell.get("name") == "发生日期（票面日期）" and not result["invoice_date"]:
+                                result["invoice_date"] = _format_date(cell.get("value", ""))
 
         if project_parts:
             result["project"] = "-".join(project_parts)
         return result
 
-    def _get_target_email(self, approval_name: str) -> str:
-        """Return the Fortnox target email for this approval type, or empty string."""
-        attr_name = self.APPROVAL_EMAIL_ATTRS.get(approval_name, "")
-        return getattr(self.settings, attr_name, "") if attr_name else ""
+    # def _get_target_email(self, approval_name: str) -> str:
+    #     """Return the Fortnox target email for this approval type, or empty string."""
+    #     attr_name = self.APPROVAL_EMAIL_ATTRS.get(approval_name, "")
+    #     return getattr(self.settings, attr_name, "") if attr_name else ""
 
     async def handle_event(self, event: dict[str, Any]) -> bool:
         """Handle approval status changed event."""
@@ -155,7 +157,7 @@ class ApprovalHandler:
             raise
 
     async def _process_approval(self, instance_code: str) -> bool:
-        """Process an approved instance: upload to Dropbox AND send email to Fortnox."""
+        """Process an approved instance: upload to Dropbox."""
         # 1. Fetch instance
         print(f"Fetching approval instance details for {instance_code}...")
         instance = await self.feishu_client.get_approval_instance(instance_code)
@@ -205,32 +207,32 @@ class ApprovalHandler:
         folder = "/".join(uploaded[0].split("/")[:4]) + "/" if uploaded else ""
         print(f"Uploaded {len(uploaded)} files to Dropbox:{folder} for {instance_code}")
 
-        # 6b. Send email to Fortnox with all attachments
-        target_email = self._get_target_email(approval_name)
-        if target_email:
-            subject = (
-                f"[{approval_name}] {serial_number}"
-                + (f" {meta['amount']}" if meta["amount"] else "")
-                + (f" {meta['project']}" if meta["project"] else "")
-            )
-            body = (
-                f"审批已通过\n\n"
-                f"审批类型: {approval_name}\n"
-                f"申请编号: {serial_number}\n"
-                f"金额: {meta['amount']}\n"
-                f"日期: {meta['invoice_date']}\n"
-                f"项目: {meta['project']}\n"
-                f"附件数量: {len(downloaded)}\n"
-            )
-            print(f"Sending email to {target_email} for {instance_code}...")
-            await self.email_sender.send_with_attachments(
-                to_email=target_email,
-                subject=subject,
-                body=body,
-                attachments=downloaded,
-            )
-            print(f"Email successfully sent to {target_email} for {instance_code}")
-        else:
-            print(f"No target email configured for '{approval_name}', skipping email")
+        # # 6b. Send email to Fortnox with all attachments
+        # target_email = self._get_target_email(approval_name)
+        # if target_email:
+        #     subject = (
+        #         f"[{approval_name}] {serial_number}"
+        #         + (f" {meta['amount']}" if meta["amount"] else "")
+        #         + (f" {meta['project']}" if meta["project"] else "")
+        #     )
+        #     body = (
+        #         f"审批已通过\n\n"
+        #         f"审批类型: {approval_name}\n"
+        #         f"申请编号: {serial_number}\n"
+        #         f"金额: {meta['amount']}\n"
+        #         f"日期: {meta['invoice_date']}\n"
+        #         f"项目: {meta['project']}\n"
+        #         f"附件数量: {len(downloaded)}\n"
+        #     )
+        #     print(f"Sending email to {target_email} for {instance_code}...")
+        #     await self.email_sender.send_with_attachments(
+        #         to_email=target_email,
+        #         subject=subject,
+        #         body=body,
+        #         attachments=downloaded,
+        #     )
+        #     print(f"Email successfully sent to {target_email} for {instance_code}")
+        # else:
+        #     print(f"No target email configured for '{approval_name}', skipping email")
 
         return len(uploaded) > 0
